@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "job": {
+      "title": "Job",
+      "description": "A job opportunity listing details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique id of the job listing" },
+        "title": { "type": "string", "description": "Title of the job listing" },
+        "companyName": { "type": "string", "description": "Name of the hiring company" },
+        "companyLogo": { "type": "string", "description": "URL of the company logo" },
+        "category": { "type": "string", "description": "Job category" },
+        "type": { "type": "string", "enum": ["Full-time", "Part-time", "Contract", "Internship"], "description": "Job type" },
+        "location": { "type": "string", "description": "Work location or remote policy" },
+        "salary": { "type": "string", "description": "Salary range or details" },
+        "postedAt": { "type": "string", "description": "ISO timestamp or human-readable relative time" },
+        "description": { "type": "string", "description": "Detailed markdown job description" },
+        "requirements": { "type": "array", "description": "List of responsibilities or requirements" },
+        "benefits": { "type": "array", "description": "List of company benefits offered" },
+        "featured": { "type": "boolean", "description": "Indicates if the job listing is featured" },
+        "applyUrl": { "type": "string", "description": "Apply URL location" },
+        "companyWebsite": { "type": "string", "description": "Company website" },
+        "companyDescription": { "type": "string", "description": "Detailed description of the company" },
+        "ownerId": { "type": "string", "description": "The UID of the user who posted this job" }
+      },
+      "required": ["id", "title", "companyName", "category", "type", "location", "salary", "postedAt", "description", "companyWebsite", "companyDescription"]
+    },
+    "userProfile": {
+      "title": "UserProfile",
+      "description": "User profile with display information and metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique UID of the authenticated user" },
+        "displayName": { "type": "string", "description": "Name of the user" },
+        "email": { "type": "string", "description": "Email of the authenticated user" },
+        "photoURL": { "type": "string", "description": "Photo URL" },
+        "createdAt": { "type": "string", "description": "Timestamp creation time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "application": {
+      "title": "Application",
+      "description": "An applicant's job application submission details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the application document" },
+        "jobId": { "type": "string", "description": "The ID of the job listing" },
+        "applicantName": { "type": "string", "description": "Full name of the candidate" },
+        "applicantEmail": { "type": "string", "description": "Email address of the candidate" },
+        "applicantResumeUrl": { "type": "string", "description": "Static link to the candidate resume or portfolio" },
+        "applicantCoverNote": { "type": "string", "description": "Optional cover letter notes provided by the candidate" },
+        "submittedAt": { "type": "string", "description": "Standard timestamp or local system date of submission" }
+      },
+      "required": ["id", "jobId", "applicantName", "applicantEmail", "applicantResumeUrl", "submittedAt"]
+    }
+  },
+  "firestore": {
+    "jobs/{jobId}": {
+      "schema": "job",
+      "description": "A collection storing all posted job listings."
+    },
+    "jobs/{jobId}/applications/{applicationId}": {
+      "schema": "application",
+      "description": "A subcollection for candidate applications under a specific job listing."
+    },
+    "users/{userId}": {
+      "schema": "userProfile",
+      "description": "A collection containing user profile metadata."
+    }
+  }
+}

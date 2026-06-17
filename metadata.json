@@ -1,0 +1,6 @@
+{
+  "name": "Work Nexis",
+  "description": "A professionally polished clone of the Work Nexis remote jobs board featuring robust job searching, interactive category filtering, direct applications, new job postings, and premium developer-focused styling with curated workspace imagery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

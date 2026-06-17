@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Globally Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && (request.auth.token.email == 'kelvin.orji@gmail.com'
+            || (exists(/databases/$(database)/documents/settings/config) && get(/databases/$(database)/documents/settings/config).data.adminEmail == request.auth.token.email))
+        && request.auth.token.email_verified == true;
+    }
+
+    // Validation helper for Job entity
+    function isValidJob(data, isUpdate) {
+      return data.keys().hasAll(['id', 'title', 'companyName', 'category', 'type', 'location', 'salary', 'postedAt', 'description', 'companyWebsite', 'companyDescription', 'ownerId']) 
+        && data.keys().size() <= 17
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.companyName is string && data.companyName.size() <= 200
+        && data.companyLogo is string && data.companyLogo.size() <= 2048
+        && data.category is string && data.category.size() <= 100
+        && (data.type == 'Full-time' || data.type == 'Part-time' || data.type == 'Contract' || data.type == 'Internship')
+        && data.location is string && data.location.size() <= 200
+        && data.salary is string && data.salary.size() <= 100
+        && data.postedAt is string && data.postedAt.size() <= 100
+        && data.description is string && data.description.size() <= 50000
+        && data.requirements is list && data.requirements.size() <= 100
+        && data.benefits is list && data.benefits.size() <= 100
+        && (data.featured == null || data.featured is bool)
+        && (data.applyUrl == null || (data.applyUrl is string && data.applyUrl.size() <= 2048))
+        && data.companyWebsite is string && data.companyWebsite.size() <= 2048
+        && data.companyDescription is string && data.companyDescription.size() <= 50000
+        && (data.ownerId == request.auth.uid || (isUpdate && data.ownerId == resource.data.ownerId));
+    }
+
+    // Validation helper for User Profile entity
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.keys().size() <= 6
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (data.displayName == null || (data.displayName is string && data.displayName.size() <= 200))
+        && (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && (data.createdAt == null || data.createdAt is string);
+    }
+
+    // Validation helper for Candidate Application entity
+    function isValidApplication(data) {
+      return data.keys().hasAll(['id', 'jobId', 'applicantName', 'applicantEmail', 'applicantResumeUrl', 'submittedAt'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.jobId is string && data.jobId.size() <= 128
+        && data.applicantName is string && data.applicantName.size() <= 200
+        && data.applicantEmail is string && data.applicantEmail.size() <= 256
+        && data.applicantResumeUrl is string && data.applicantResumeUrl.size() <= 2048
+        && (data.applicantCoverNote == null || (data.applicantCoverNote is string && data.applicantCoverNote.size() <= 50000))
+        && data.submittedAt is string && data.submittedAt.size() <= 100;
+    }
+
+    // 3. Collection Rules
+    match /jobs/{jobId} {
+      allow read: if true;
+      
+      allow create: if isAdmin()
+        && isValidId(jobId)
+        && jobId == incoming().id
+        && isValidJob(incoming(), false);
+
+      allow update: if isAdmin()
+        && isValidId(jobId)
+        && isValidJob(incoming(), true)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'companyName', 'companyLogo', 'category', 'type', 'location', 
+          'salary', 'description', 'requirements', 'benefits', 'featured', 
+          'applyUrl', 'companyWebsite', 'companyDescription', 'ownerId'
+        ]);
+
+      allow delete: if isAdmin()
+        && isValidId(jobId);
+
+      match /applications/{applicationId} {
+        allow read: if isAdmin();
+        allow create: if isValidId(applicationId)
+          && applicationId == incoming().id
+          && jobId == incoming().jobId
+          && isValidApplication(incoming());
+        allow update: if false;
+        allow delete: if isAdmin()
+          && isValidId(applicationId);
+      }
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && isValidId(settingId);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUserProfile(incoming());
+
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'createdAt'
+        ]);
+
+      allow delete: if false; 
+    }
+  }
+}
